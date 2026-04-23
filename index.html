@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業乒乓球計分器 Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap');
+        
+        body {
+            background-color: #0a0a0a;
+            color: white;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .score-font {
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+        .serving-active {
+            border-color: #22c55e !important;
+            box-shadow: 0 0 30px rgba(34, 197, 94, 0.2);
+        }
+        .setup-overlay {
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center overflow-hidden">
+
+    <div id="setup-modal" class="fixed inset-0 z-50 flex items-center justify-center setup-overlay p-4">
+        <div class="bg-white text-black rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">🏆 賽前設定</h1>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block font-bold mb-1">左側選手 (Player A)</label>
+                    <input type="text" id="p1-name-input" value="選手 A" class="w-full border-2 border-gray-200 rounded-lg p-3 outline-none focus:border-green-500">
+                </div>
+                <div>
+                    <label class="block font-bold mb-1">右側選手 (Player B)</label>
+                    <input type="text" id="p2-name-input" value="選手 B" class="w-full border-2 border-gray-200 rounded-lg p-3 outline-none focus:border-green-500">
+                </div>
+                
+                <div>
+                    <label class="block font-bold mb-2">賽制選擇</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setMode(2)" class="mode-btn bg-gray-100 py-2 rounded-lg hover:bg-green-100 border-2 border-transparent">三戰二勝</button>
+                        <button onclick="setMode(3)" class="mode-btn bg-green-500 text-white py-2 rounded-lg border-2 border-green-600">五戰三勝</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold mb-2">首局發球權</label>
+                    <div class="flex gap-4">
+                        <label class="flex-1 text-center border-2 p-2 rounded-lg cursor-pointer">
+                            <input type="radio" name="server" value="1" checked class="mr-2"> 左側
+                        </label>
+                        <label class="flex-1 text-center border-2 p-2 rounded-lg cursor-pointer">
+                            <input type="radio" name="server" value="2" class="mr-2"> 右側
+                        </label>
+                    </div>
+                </div>
+
+                <button onclick="startGame()" class="w-full bg-green-600 text-white text-xl font-bold py-4 rounded-xl hover:bg-green-700 transition transform active:scale-95 shadow-lg mt-4">
+                    開始比賽
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col w-full h-full p-4 lg:p-10">
+        <div class="text-center mb-4">
+            <p class="text-yellow-400 font-bold tracking-widest text-xl">SETS</p>
+            <div class="text-6xl font-bold text-yellow-400 score-font" id="sets-display">0 : 0</div>
+        </div>
+
+        <div class="flex-1 flex flex-row gap-4 lg:gap-10 items-stretch">
+            <div id="p1-card" class="flex-1 border-4 border-gray-800 rounded-3xl flex flex-col items-center justify-center p-6 transition-all duration-300">
+                <div id="p1-serve" class="text-green-500 font-bold mb-4 opacity-0 text-xl tracking-widest">● SERVING</div>
+                <h2 id="p1-name-display" class="text-3xl font-bold mb-2">選手 A</h2>
+                <div id="p1-score" class="text-[10rem] lg:text-[18rem] leading-none score-font mb-8">0</div>
+                <button onclick="addScore(1)" class="w-full max-w-xs bg-blue-700 hover:bg-blue-600 text-white py-6 rounded-2xl text-4xl font-bold shadow-xl active:scale-95 transition">得分 +1</button>
+                <button id="p1-timeout" onclick="useTimeout(1)" class="mt-6 text-gray-400 hover:text-white underline">暫停 (Timeout)</button>
+            </div>
+
+            <div id="p2-card" class="flex-1 border-4 border-gray-800 rounded-3xl flex flex-col items-center justify-center p-6 transition-all duration-300">
+                <div id="p2-serve" class="text-green-500 font-bold mb-4 opacity-0 text-xl tracking-widest">● SERVING</div>
+                <h2 id="p2-name-display" class="text-3xl font-bold mb-2">選手 B</h2>
+                <div id="p2-score" class="text-[10rem] lg:text-[18rem] leading-none score-font mb-8">0</div>
+                <button onclick="addScore(2)" class="w-full max-w-xs bg-blue-700 hover:bg-blue-600 text-white py-6 rounded-2xl text-4xl font-bold shadow-xl active:scale-95 transition">得分 +1</button>
+                <button id="p2-timeout" onclick="useTimeout(2)" class="mt-6 text-gray-400 hover:text-white underline">暫停 (Timeout)</button>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
+            <button onclick="location.reload()" class="bg-red-900/50 hover:bg-red-800 text-red-400 px-8 py-3 rounded-full border border-red-500 transition">
+                ❌ 結束比賽並重新設定
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let p1Score = 0, p2Score = 0;
+        let p1Sets = 0, p2Sets = 0;
+        let winningSetsNeeded = 3;
+        let firstServer = 1;
+        let currentServer = 1;
+        let p1TimeoutUsed = false;
+        let p2TimeoutUsed = false;
+
+        function setMode(sets) {
+            winningSetsNeeded = sets;
+            document.querySelectorAll('.mode-btn').forEach(b => {
+                b.classList.remove('bg-green-500', 'text-white');
+                b.classList.add('bg-gray-100', 'text-black');
+            });
+            event.target.classList.add('bg-green-500', 'text-white');
+        }
+
+        function startGame() {
+            document.getElementById('p1-name-display').innerText = document.getElementById('p1-name-input').value || "選手 A";
+            document.getElementById('p2-name-display').innerText = document.getElementById('p2-name-input').value || "選手 B";
+            firstServer = parseInt(document.querySelector('input[name="server"]:checked').value);
+            currentServer = firstServer;
+            document.getElementById('setup-modal').style.display = 'none';
+            updateDisplay();
+        }
+
+        function addScore(player) {
+            if (player === 1) p1Score++;
+            else p2Score++;
+            
+            calculateServer();
+            checkRules();
+            updateDisplay();
+        }
+
+        function calculateServer() {
+            const total = p1Score + p2Score;
+            const interval = (p1Score >= 10 && p2Score >= 10) ? 1 : 2;
+            
+            if (Math.floor(total / interval) % 2 === 0) {
+                currentServer = firstServer;
+            } else {
+                currentServer = (firstServer === 1) ? 2 : 1;
+            }
+        }
+
+        function checkRules() {
+            const p1Win = p1Score >= 11 && (p1Score - p2Score >= 2);
+            const p2Win = p2Score >= 11 && (p2Score - p1Score >= 2);
+
+            if (p1Win || p2Win) {
+                const winner = p1Win ? document.getElementById('p1-name-display').innerText : document.getElementById('p2-name-display').innerText;
+                alert(`本局獲勝：${winner}`);
+                
+                if (p1Win) p1Sets++; else p2Sets++;
+                
+                p1Score = 0; p2Score = 0;
+                firstServer = (firstServer === 1) ? 2 : 1;
+                currentServer = firstServer;
+
+                checkMatchOver();
+            }
+        }
+
+        function checkMatchOver() {
+            if (p1Sets === winningSetsNeeded || p2Sets === winningSetsNeeded) {
+                const winner = p1Sets === winningSetsNeeded ? document.getElementById('p1-name-display').innerText : document.getElementById('p2-name-display').innerText;
+                alert(`🏆 最終勝出：${winner}`);
+                location.reload();
+            }
+        }
+
+        function useTimeout(player) {
+            if (player === 1 && !p1TimeoutUsed) {
+                p1TimeoutUsed = true;
+                document.getElementById('p1-timeout').innerText = "已使用暫停";
+                document.getElementById('p1-timeout').disabled = true;
+                alert(`${document.getElementById('p1-name-display').innerText} 要求暫停`);
+            } else if (player === 2 && !p2TimeoutUsed) {
+                p2TimeoutUsed = true;
+                document.getElementById('p2-timeout').innerText = "已使用暫停";
+                document.getElementById('p2-timeout').disabled = true;
+                alert(`${document.getElementById('p2-name-display').innerText} 要求暫停`);
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('p1-score').innerText = p1Score;
+            document.getElementById('p2-score').innerText = p2Score;
+            document.getElementById('sets-display').innerText = `${p1Sets} : ${p2Sets}`;
+
+            // 發球顯示
+            document.getElementById('p1-serve').style.opacity = (currentServer === 1) ? "1" : "0";
+            document.getElementById('p2-serve').style.opacity = (currentServer === 2) ? "1" : "0";
+            
+            document.getElementById('p1-card').className = `flex-1 border-4 rounded-3xl flex flex-col items-center justify-center p-6 transition-all duration-300 ${currentServer === 1 ? 'serving-active border-green-500' : 'border-gray-800'}`;
+            document.getElementById('p2-card').className = `flex-1 border-4 rounded-3xl flex flex-col items-center justify-center p-6 transition-all duration-300 ${currentServer === 2 ? 'serving-active border-green-500' : 'border-gray-800'}`;
+        }
+    </script>
+</body>
+</html>
